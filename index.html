@@ -382,22 +382,69 @@
       line-height: 1.85; max-width: 580px; margin-bottom: 36px;
     }
 
-    .decks-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
-    }
+    .deck-stack-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+}
 
+.deck-stack {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  height: 440px;
+  margin: 0 auto;
+  perspective: 1200px;
+}
     .deck-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      text-decoration: none;
-      display: flex; flex-direction: column;
-      overflow: hidden;
-      transition: transform 0.35s cubic-bezier(.22,.68,0,1.2),
-                  border-color 0.3s, box-shadow 0.3s;
-      position: relative;
-    }
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  position: absolute;   /* stack all cards on top of each other */
+  width: 100%;
+  top: 0; left: 0;
+  will-change: transform, opacity;
+  transition: transform 0.55s cubic-bezier(.22,.68,0,1.2),
+              opacity 0.55s ease,
+              box-shadow 0.55s ease,
+              border-color 0.3s;
+  transform-origin: center bottom;
+  cursor: pointer;
+}
+    /* DECK NAVIGATION */
+.deck-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.deck-btn {
+  font-family: var(--sans);
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--gold);
+  background: transparent;
+  border: 1px solid rgba(79,142,247,0.3);
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.deck-btn:hover { background: var(--gold); color: var(--bg); }
+.deck-btn:disabled { opacity: 0.25; cursor: default; }
+.deck-btn:disabled:hover { background: transparent; color: var(--gold); }
+
+.deck-counter {
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 2px;
+  color: var(--muted);
+  min-width: 48px;
+  text-align: center;
+}
 
     .deck-card:not(.placeholder):hover {
       transform: translateY(-6px);
@@ -847,7 +894,8 @@
         The work doesn't end with the analysis. Here's where the thinking gets packaged — strategy memos, research reports, and case studies.
       </p>
 
-      <div class="decks-grid">
+      <div class="deck-stack-wrapper">
+<div class="deck-stack" id="deckStack">
 
         <a href="https://drive.google.com/file/d/1_SgiywQ2VPLsoMV02kt8ICfjckXDD-1z/preview" class="deck-card" target="_blank">
           <div class="deck-cover">
@@ -931,6 +979,13 @@
         </div>
 
       </div>
+        <div class="deck-nav">
+        <button class="deck-btn" id="deckPrev">← Prev</button>
+        <div class="deck-counter" id="deckCounter">1 / 6</div>
+        <button class="deck-btn" id="deckNext">Next →</button>
+      </div>
+
+    </div>
       <p class="decks-note">// To add a deck: upload cover image to repo, get Google Drive /preview link, swap placeholder card with live &lt;a&gt; tag</p>
     </div>
   </section>
@@ -1105,6 +1160,97 @@
       document.getElementById('site-header').style.borderBottomColor =
         snapEl.scrollTop > 40 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.08)';
     }, { passive: true });
+    /* ── 3D CARD STACK ── */
+(function() {
+  const stack    = document.getElementById('deckStack');
+  if (!stack) return;
+  const cards    = [...stack.querySelectorAll('.deck-card')];
+  const prevBtn  = document.getElementById('deckPrev');
+  const nextBtn  = document.getElementById('deckNext');
+  const counter  = document.getElementById('deckCounter');
+  let active = 0;
+
+  function updateStack() {
+    cards.forEach((card, i) => {
+      const offset = i - active;
+
+      if (offset < 0) {
+        /* cards already seen — fly out to the left */
+        card.style.transform = `translateX(-110%) scale(0.85) rotateY(25deg)`;
+        card.style.opacity   = '0';
+        card.style.zIndex    = '0';
+        card.style.pointerEvents = 'none';
+        card.style.boxShadow = 'none';
+
+      } else if (offset === 0) {
+        /* active card — front and centre */
+        card.style.transform = `translateY(0px) scale(1) rotateX(0deg)`;
+        card.style.opacity   = '1';
+        card.style.zIndex    = String(cards.length + 1);
+        card.style.pointerEvents = 'auto';
+        card.style.boxShadow = '0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(79,142,247,0.2)';
+        card.style.borderColor = 'rgba(79,142,247,0.45)';
+
+      } else if (offset === 1) {
+        /* one behind */
+        card.style.transform = `translateY(18px) scale(0.94) rotateX(3deg)`;
+        card.style.opacity   = '0.65';
+        card.style.zIndex    = String(cards.length);
+        card.style.pointerEvents = 'none';
+        card.style.boxShadow = 'none';
+        card.style.borderColor = '';
+
+      } else if (offset === 2) {
+        /* two behind */
+        card.style.transform = `translateY(32px) scale(0.88) rotateX(5deg)`;
+        card.style.opacity   = '0.35';
+        card.style.zIndex    = String(cards.length - 1);
+        card.style.pointerEvents = 'none';
+        card.style.boxShadow = 'none';
+        card.style.borderColor = '';
+
+      } else {
+        /* further behind — barely visible */
+        card.style.transform = `translateY(42px) scale(0.83) rotateX(7deg)`;
+        card.style.opacity   = '0.12';
+        card.style.zIndex    = String(cards.length - 2);
+        card.style.pointerEvents = 'none';
+        card.style.boxShadow = 'none';
+        card.style.borderColor = '';
+      }
+    });
+
+    /* update counter */
+    counter.textContent = (active + 1) + ' / ' + cards.length;
+
+    /* button states */
+    prevBtn.disabled = active === 0;
+    nextBtn.disabled = active === cards.length - 1;
+  }
+
+  /* click active card to advance (only for placeholder cards, not links) */
+  cards.forEach((card, i) => {
+    if (!card.href) {                    /* placeholder divs only */
+      card.addEventListener('click', () => {
+        if (i === active && active < cards.length - 1) {
+          active++;
+          updateStack();
+        }
+      });
+    }
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if (active < cards.length - 1) { active++; updateStack(); }
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (active > 0) { active--; updateStack(); }
+  });
+
+  /* initialise */
+  updateStack();
+})();
   </script>
 
 </body>
